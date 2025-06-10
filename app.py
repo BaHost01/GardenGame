@@ -1,145 +1,201 @@
-import pygame import sys import random import json import os
+import pygame import sys import random import json import os import traceback import hashlib
 
-Constants\ nWIDTH, HEIGHT = 800, 600
+SAVE_FILE = 'savegame.json' KEYBIND_FILE = 'keybinds.json' SETTINGS_FILE = 'settings.json' ASSET_DIR = 'assets' WIDTH, HEIGHT = 800, 600 FPS = 60
 
-FPS = 60 SAVE_FILE = 'savegame.json'
+def load_json(path, default): if not os.path.exists(path): save_json(path, default) return default.copy() try: with open(path, 'r') as f: return json.load(f) except: return default.copy()
 
-Colors
+def save_json(path, data): try: with open(path, 'w') as f: json.dump(data, f, indent=4) except Exception: traceback.print_exc()
 
-WHITE = (255,255,255) BLACK = (0,0,0)
+def checksum(path): try: with open(path, 'rb') as f: return hashlib.sha256(f.read()).hexdigest() except: return ''
 
-Initialize pygame and customtinker
+def verify_settings(): settings = load_json(SETTINGS_FILE, {'volume': 0.5, 'anticheat_checksum': ''}) stored = settings.get('anticheat_checksum', '') current = checksum(SETTINGS_FILE) if stored and stored != current: raise RuntimeError('Settings tampered') settings['anticheat_checksum'] = current save_json(SETTINGS_FILE, settings)
 
-pygame.init() from customtinker import Button, Panel, Label, Image  # hypothetical
+PLANTS = { 'tomato': {'grow_time': 3, 'yield': (2, 5), 'price': 5, 'img': 'tomato.png', 'premium': False}, 'mystic': {'grow_time': 5, 'yield': (5, 10), 'price': 20, 'img': 'mystic_seed.png', 'premium': True}, 'carrot': {'grow_time': 2, 'yield': (1, 3), 'price': 3, 'img': 'carrot.png', 'premium': False}, 'strawberry': {'grow_time': 4, 'yield': (3, 6), 'price': 8, 'img': 'strawberry.png', 'premium': False}, 'corn': {'grow_time': 5, 'yield': (4, 8), 'price': 10, 'img': 'corn.png', 'premium': False}, 'blueberry': {'grow_time': 4, 'yield': (2, 7), 'price': 12, 'img': 'blueberry.png', 'premium': True} } GEAR = { 'watering_can': {'price': 50, 'effect': 'auto_water', 'premium': False}, 'fertilizer': {'price': 100, 'effect': 'fast_growth', 'premium': True}, 'sprinkler': {'price': 150, 'effect': 'area_water', 'premium': False}, 'scarecrow': {'price': 200, 'effect': 'pest_protect', 'premium': False}, 'greenhouse': {'price': 500, 'effect': 'year_round', 'premium': True} }
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT)) clock = pygame.time.Clock()
+def create_default_files(): load_json(KEYBIND_FILE, {'plant': '1', 'water': '2', 'next_day': '3', 'harvest': '4', 'shop': '5', 'gear_shop': '6', 'premium': '7'}) load_json(SETTINGS_FILE, {'volume': 0.5, 'anticheat_checksum': ''})
 
-Load assets
+class Game: def init(self): pygame.init() self.screen = pygame.display.set_mode((WIDTH, HEIGHT)) pygame.display.set_caption('Gardening Tycoon') self.clock = pygame.time.Clock() verify_settings() self.keybinds = load_json(KEYBIND_FILE, {}) self.settings = load_json(SETTINGS_FILE, {}) self.day = 1 self.money = 100 self.premium = False self.inventory = {} self.plots = [None] * 6 self.gear = [] self.state = 'main' self.load_assets() from customtinker import Panel, Button, Label self.Panel = Panel self.Button = Button self.Label = Label self.ui = {} self.setup_ui() self.load_game()
 
-BACKGROUND = pygame.image.load('assets/garden_bg.png') TREE_IMG = pygame.image.load('assets/plant_spot.png') SHOP_IMG = pygame.image.load('assets/shop_bg.png')
-
-Plant definitions\ nPLANTS = {
-
-'tomato': {'grow_time':3, 'yield':(2,5), 'price':5, 'img':'assets/tomato.png', 'premium_only':False},
-'mystic': {'grow_time':5, 'yield':(5,10), 'price':20, 'img':'assets/mystic_seed.png', 'premium_only':True}
-
-}
-
-Gear items\ nGEAR = {
-
-'watering_can': {'price':50, 'effect':'auto_water'},
-'fertilizer': {'price':100, 'effect':'faster_growth', 'premium_only':True}
-
-}
-
-class Game: def init(self): self.day = 1 self.money = 100 self.premium = False self.inventory = {} self.plots = [None]*5  # 5 spots self.gear = [] self.load() # UI panels self.main_menu = Panel()  # will hold buttons self.garden_panel = Panel() self.shop_panel = Panel() self.gear_panel = Panel() self.setup_ui() self.state = 'garden'
+def load_assets(self):
+    self.bg = pygame.image.load(os.path.join(ASSET_DIR, 'garden_bg.png'))
+    self.spot = pygame.image.load(os.path.join(ASSET_DIR, 'plant_spot.png'))
+    self.shop_bg = pygame.image.load(os.path.join(ASSET_DIR, 'shop_bg.png'))
 
 def setup_ui(self):
-    # Main Garden Buttons
-    self.btn_next = Button('Next Day', (650,500), callback=self.next_day)
-    self.btn_shop = Button('Seed Shop', (650,450), callback=lambda:self.change_state('shop'))
-    self.btn_gear = Button('Gear Shop', (650,400), callback=lambda:self.change_state('gear'))
-    self.btn_premium = Button('Go Premium', (650,350), callback=self.upgrade_premium)
-    self.main_menu.add(self.btn_next, self.btn_shop, self.btn_gear, self.btn_premium)
+    main = self.Panel()
+    main.add(self.Label('Gardening Tycoon', (250, 100), size=48))
+    main.add(self.Button('Enter Garden', (300, 200), callback=lambda: self.set_state('garden')))
+    main.add(self.Button('Seed Shop', (300, 260), callback=lambda: self.set_state('shop')))
+    main.add(self.Button('Gear Shop', (300, 320), callback=lambda: self.set_state('gear')))
+    main.add(self.Button('Quit', (300, 380), callback=self.exit_game))
+    self.ui['main'] = main
+    garden = self.Panel()
+    garden.add(self.Label(lambda: f'Day {self.day}', (20, 20)))
+    garden.add(self.Label(lambda: f'Money: ${self.money}', (20, 60)))
+    actions = [
+        ('Next Day', self.next_day),
+        ('Plant', self.plant_cycle),
+        ('Water', self.water_cycle),
+        ('Back', lambda: self.set_state('main'))
+    ]
+    for i, (text, cb) in enumerate(actions):
+        garden.add(self.Button(text, (650, 150 + i * 60), callback=cb))
+    self.ui['garden'] = garden
+    shop = self.Panel()
+    shop.add(self.Label('Seed Shop', (50, 30), size=36))
+    y = 100
+    for seed, spec in PLANTS.items():
+        if spec['premium'] and not self.premium:
+            continue
+        shop.add(self.Label(f"{seed.capitalize()} - ${spec['price']}", (50, y)))
+        shop.add(self.Button('Buy', (250, y), callback=lambda sd=seed: self.buy_seed(sd)))
+        y += 50
+    shop.add(self.Button('Back', (650, 500), callback=lambda: self.set_state('main')))
+    self.ui['shop'] = shop
+    gearp = self.Panel()
+    gearp.add(self.Label('Gear Shop', (50, 30), size=36))
+    y = 100
+    for item, spec in GEAR.items():
+        if spec['premium'] and not self.premium:
+            continue
+        gearp.add(self.Label(f"{item.replace('_', ' ').capitalize()} - ${spec['price']}", (50, y)))
+        gearp.add(self.Button('Buy', (250, y), callback=lambda it=item: self.buy_gear(it)))
+        y += 50
+    gearp.add(self.Button('Back', (650, 500), callback=lambda: self.set_state('main')))
+    self.ui['gear'] = gearp
 
-def change_state(self, st): self.state = st
+def set_state(self, state):
+    self.state = state
 
-def upgrade_premium(self):
-    # simplistic unlock
-    if self.money>=200:
-        self.money-=200
-        self.premium=True
-        print('Premium unlocked! Exclusive seeds and gear available.')
+def exit_game(self):
+    self.save_game()
+    pygame.quit()
+    sys.exit(0)
 
-def load(self):
-    if os.path.exists(SAVE_FILE):
-        data=json.load(open(SAVE_FILE))
-        self.__dict__.update(data)
-        print('Loaded')
+def load_game(self):
+    data = load_json(SAVE_FILE, {})
+    for key in ['day', 'money', 'premium', 'inventory', 'plots', 'gear']:
+        setattr(self, key, data.get(key, getattr(self, key)))
 
-def save(self):
-    data={k:v for k,v in self.__dict__.items() if k in ['day','money','premium','inventory','plots','gear']}
-    json.dump(data, open(SAVE_FILE,'w'))
+def save_game(self):
+    save_json(
+        SAVE_FILE,
+        {
+            'day': self.day,
+            'money': self.money,
+            'premium': self.premium,
+            'inventory': self.inventory,
+            'plots': self.plots,
+            'gear': self.gear,
+        }
+    )
 
 def next_day(self):
-    # growth and events\ n        for i,plant in enumerate(self.plots):
-        if plant:
+    ev = random.choice(['rain', 'pests', 'none'])
+    if ev == 'rain':
+        self.auto_water()
+    if ev == 'pests':
+        self.pest_event()
+    for i, plot in enumerate(self.plots):
+        if plot:
             if 'auto_water' in self.gear:
-                plant['watered']=True
-            if plant['watered']:
-                plant['days']+=1
-                plant['watered']=False
-            if plant['days']>=plant['grow_time']:
-                qty=random.randint(*plant['yield'])
-                if self.premium: qty*=2
-                self.money+=qty*plant['price']
-                self.plots[i]=None
-    self.day+=1
+                plot['watered'] = True
+            if plot['watered']:
+                plot['days'] += 1
+                plot['watered'] = False
+            if plot['days'] >= plot['grow_time']:
+                qty = random.randint(*plot['yield'])
+                earn = qty * plot['price'] * (2 if self.premium else 1)
+                self.money += earn
+                self.plots[i] = None
+    self.day += 1
 
-def plant(self,index, seed):
-    spec=PLANTS[seed]
-    if spec['premium_only'] and not self.premium: return
-    if self.money<spec['price'] or self.plots[index]: return
-    self.money-=spec['price']
-    self.plots[index]={'type':seed,'days':0,'grow_time':spec['grow_time'],'yield':spec['yield'],'price':spec['price'],'watered':False}
+def auto_water(self):
+    for plot in self.plots:
+        if plot:
+            plot['watered'] = True
 
-def water(self,index):
-    if self.plots[index]: self.plots[index]['watered']=True
+def pest_event(self):
+    occupied = [i for i, plot in enumerate(self.plots) if plot]
+    if occupied:
+        victim = random.choice(occupied)
+        self.plots[victim] = None
 
-def buy_seed(self,seed):
-    spec=PLANTS[seed]
-    if spec['premium_only'] and not self.premium: return
-    if self.money<spec['price']: return
-    self.money-=spec['price']
-    self.inventory[seed]=self.inventory.get(seed,0)+1
+def plant_cycle(self):
+    for seed, qty in list(self.inventory.items()):
+        if qty > 0:
+            for i, plot in enumerate(self.plots):
+                if not plot:
+                    self.inventory[seed] -= 1
+                    spec = PLANTS[seed]
+                    self.plots[i] = {
+                        'type': seed,
+                        'days': 0,
+                        'grow_time': spec['grow_time'],
+                        'yield': spec['yield'],
+                        'price': spec['price'],
+                        'watered': False,
+                    }
+                    return
 
-def buy_gear(self,item):
-    spec=GEAR[item]
-    if spec.get('premium_only') and not self.premium: return
-    if self.money<spec['price']: return
-    self.money-=spec['price']
+def water_cycle(self):
+    for i, plot in enumerate(self.plots):
+        if plot and not plot['watered']:
+            plot['watered'] = True
+            return
+
+def buy_seed(self, seed):
+    spec = PLANTS[seed]
+    if spec['premium'] and not self.premium:
+        return
+    if self.money < spec['price']:
+        return
+    self.money -= spec['price']
+    self.inventory[seed] = self.inventory.get(seed, 0) + 1
+
+def buy_gear(self, item):
+    spec = GEAR[item]
+    if spec['premium'] and not self.premium:
+        return
+    if self.money < spec['price']:
+        return
+    self.money -= spec['price']
     self.gear.append(spec['effect'])
 
-def draw_garden(self):
-    screen.blit(BACKGROUND, (0,0))
-    for i,pos in enumerate([(100+120*i,300) for i in range(5)]]):
-        screen.blit(TREE_IMG, pos)
-        plant=self.plots[i]
-        if plant:
-            img=pygame.image.load(PLANTS[plant['type']]['img'])
-            screen.blit(img,pos)
-    self.main_menu.draw(screen)
+def draw(self):
+    if self.state == 'main':
+        self.screen.fill((30, 160, 30))
+    elif self.state == 'garden':
+        self.screen.blit(self.bg, (0, 0))
+        for idx, pos in enumerate([(100 + i * 120, 350) for i in range(len(self.plots))]):
+            self.screen.blit(self.spot, pos)
+            plot = self.plots[idx]
+            if plot:
+                img = pygame.image.load(os.path.join(ASSET_DIR, PLANTS[plot['type']]['img']))
+                self.screen.blit(img, pos)
+    elif self.state == 'shop':
+        self.screen.blit(self.shop_bg, (0, 0))
+    elif self.state == 'gear':
+        self.screen.fill((100, 100, 100))
+    self.ui[self.state].draw(self.screen)
+    pygame.display.flip()
 
-def draw_shop(self):
-    screen.blit(SHOP_IMG, (0,0))
-    y=100
-    for seed,spec in PLANTS.items():
-        if spec['premium_only'] and not self.premium: continue
-        Label(f"{seed} - ${spec['price']}", (50,y)).draw(screen)
-        Button('Buy', (200,y), callback=lambda s=seed:self.buy_seed(s)).draw(screen)
-        y+=50
-    Button('Back', (650,550), callback=lambda:self.change_state('garden')).draw(screen)
-
-def draw_gear(self):
-    screen.fill(WHITE)
-    y=100
-    for item,spec in GEAR.items():
-        if spec.get('premium_only') and not self.premium: continue
-        Label(f"{item} - ${spec['price']}", (50,y)).draw(screen)
-        Button('Buy', (200,y), callback=lambda i=item:self.buy_gear(i)).draw(screen)
-        y+=50
-    Button('Back', (650,550), callback=lambda:self.change_state('garden')).draw(screen)
+def handle_events(self):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            self.exit_game()
+        self.ui[self.state].handle_event(event)
 
 def run(self):
-    while True:
-        for e in pygame.event.get():
-            if e.type==pygame.QUIT: sys.exit()
-            if self.state=='garden': self.main_menu.handle_event(e)
-        if self.state=='garden': self.draw_garden()
-        elif self.state=='shop': self.draw_shop()
-        elif self.state=='gear': self.draw_gear()
-        pygame.display.flip()
-        clock.tick(FPS)
+    try:
+        while True:
+            self.handle_events()
+            self.draw()
+            self.clock.tick(FPS)
+    except Exception:
+        traceback.print_exc()
+        pygame.quit()
+        sys.exit(1)
 
-if name=='main': Game().run()
+if name == 'main': create_default_files() Game().run()
 
