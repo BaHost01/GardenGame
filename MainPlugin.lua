@@ -5,6 +5,8 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local StarterGui = game:GetService("StarterGui")
 
 local toolbar = plugin:CreateToolbar("Jardim Premium")
 local createBtn = toolbar:CreateButton("Criar Jardim", "Inicializa o sistema premium", "rbxassetid://7078459360")
@@ -30,9 +32,185 @@ local function safeCreate(instanceType, props, parent)
     return result
 end
 
-createBtn.Click:Connect(function()
-    -- =============== CONFIGURAÇÃO PRINCIPAL ===============
-    local GardenConfig = safeCreate("ModuleScript", {
+-- Tela de carregamento
+local function createLoadingScreen()
+    local loadingScreen = safeCreate("ScreenGui", {
+        Name = "LoadingScreen",
+        IgnoreGuiInset = true
+    }, StarterGui)
+    
+    local frame = safeCreate("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(10, 20, 30)
+    }, loadingScreen)
+    
+    local logo = safeCreate("ImageLabel", {
+        Image = "rbxassetid://7078461234",
+        Size = UDim2.new(0.3, 0, 0.15, 0),
+        Position = UDim2.new(0.35, 0, 0.2, 0),
+        BackgroundTransparency = 1
+    }, frame)
+    
+    local progressBar = safeCreate("Frame", {
+        Size = UDim2.new(0.6, 0, 0.03, 0),
+        Position = UDim2.new(0.2, 0, 0.6, 0),
+        BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    }, frame)
+    
+    local progressFill = safeCreate("Frame", {
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    }, progressBar)
+    
+    local statusLabel = safeCreate("TextLabel", {
+        Text = "Inicializando...",
+        Size = UDim2.new(1, 0, 0.05, 0),
+        Position = UDim2.new(0, 0, 0.65, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.new(1,1,1),
+        Font = Enum.Font.Gotham,
+        TextSize = 20
+    }, frame)
+    
+    return {
+        gui = loadingScreen,
+        update = function(text, progress)
+            statusLabel.Text = text
+            progressFill.Size = UDim2.new(progress, 0, 1, 0)
+        end
+    }
+end
+
+-- Sistema de geração do mapa
+local function createGardenMap()
+    -- Área principal
+    local gardenArea = safeCreate("Part", {
+        Name = "GardenArea",
+        Size = Vector3.new(200, 1, 200),
+        Position = Vector3.new(0, 0, 0),
+        Anchored = true,
+        Color = Color3.fromRGB(34, 139, 34),
+        Material = Enum.Material.Grass
+    }, workspace)
+    
+    -- Canteiros
+    local plots = {}
+    for x = -80, 80, 20 do
+        for z = -80, 80, 20 do
+            local plot = safeCreate("Part", {
+                Name = "GardenPlot",
+                Size = Vector3.new(10, 1, 10),
+                Position = Vector3.new(x, 0.5, z),
+                Anchored = true,
+                Color = Color3.fromRGB(101, 67, 33),
+                Material = Enum.Material.WoodPlanks
+            }, workspace)
+            
+            safeCreate("BoxHandleAdornment", {
+                Size = Vector3.new(10.1, 0.2, 10.1),
+                Color3 = Color3.new(0,1,0),
+                Transparency = 0.7,
+                Adornee = plot,
+                AlwaysOnTop = true,
+                ZIndex = 1
+            }, plot)
+            
+            local prompt = safeCreate("ProximityPrompt", {
+                ActionText = "Plantar",
+                ObjectText = "Canteiro",
+                HoldDuration = 1,
+                MaxActivationDistance = 15
+            }, plot)
+            
+            table.insert(plots, plot)
+        end
+    end
+    
+    -- Loja
+    local shopStand = safeCreate("Part", {
+        Name = "SeedShop",
+        Size = Vector3.new(15, 10, 15),
+        Position = Vector3.new(0, 5, 100),
+        Anchored = true,
+        Color = Color3.fromRGB(30, 144, 255),
+        Material = Enum.Material.Neon
+    }, workspace)
+    
+    local shopSign = safeCreate("BillboardGui", {
+        Size = UDim2.new(10, 0, 3, 0),
+        Adornee = shopStand,
+        AlwaysOnTop = true,
+        ExtentsOffset = Vector3.new(0, 8, 0)
+    }, shopStand)
+    
+    safeCreate("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Text = "MERCADO PREMIUM",
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.new(1,1,1),
+        Font = Enum.Font.GothamBold,
+        TextSize = 28
+    }, shopSign)
+    
+    local shopPrompt = safeCreate("ProximityPrompt", {
+        ActionText = "Abrir Loja",
+        ObjectText = "Loja de Sementes",
+        HoldDuration = 0.5,
+        MaxActivationDistance = 20
+    }, shopStand)
+    
+    -- Decoração
+    local function createTree(position)
+        local trunk = safeCreate("Part", {
+            Size = Vector3.new(3, 12, 3),
+            Position = position + Vector3.new(0, 6, 0),
+            Anchored = true,
+            Color = Color3.fromRGB(101, 67, 33),
+            Material = Enum.Material.Wood
+        }, workspace)
+        
+        local leaves = safeCreate("Part", {
+            Size = Vector3.new(12, 12, 12),
+            Position = position + Vector3.new(0, 18, 0),
+            Anchored = true,
+            Color = Color3.fromRGB(34, 139, 34),
+            Shape = Enum.PartType.Ball,
+            Material = Enum.Material.Grass
+        }, workspace)
+    end
+    
+    createTree(Vector3.new(50, 0, 50))
+    createTree(Vector3.new(-50, 0, 50))
+    createTree(Vector3.new(50, 0, -50))
+    createTree(Vector3.new(-50, 0, -50))
+    
+    -- Fonte central
+    local fountain = safeCreate("Part", {
+        Size = Vector3.new(15, 2, 15),
+        Position = Vector3.new(0, 1, 0),
+        Anchored = true,
+        Color = Color3.fromRGB(200, 200, 200),
+        Material = Enum.Material.Marble
+    }, workspace)
+    
+    local water = safeCreate("Part", {
+        Size = Vector3.new(12, 1, 12),
+        Position = Vector3.new(0, 2.5, 0),
+        Anchored = true,
+        Transparency = 0.5,
+        Color = Color3.fromRGB(100, 200, 255),
+        Material = Enum.Material.Water
+    }, workspace)
+    
+    return {
+        plots = plots,
+        shop = shopStand
+    }
+end
+
+-- Configuração principal
+local function createGardenConfig()
+    return safeCreate("ModuleScript", {
         Name = "GardenConfig",
         Source = [[
             return {
@@ -121,9 +299,11 @@ createBtn.Click:Connect(function()
             }
         ]]
     }, ReplicatedStorage)
+end
 
-    -- =============== MÓDULO DE UTILIDADES ===============
-    local GardenUtils = safeCreate("ModuleScript", {
+-- Módulo de utilidades
+local function createGardenUtils()
+    return safeCreate("ModuleScript", {
         Name = "GardenUtils",
         Source = [[
             local TweenService = game:GetService("TweenService")
@@ -161,7 +341,7 @@ createBtn.Click:Connect(function()
                 local plant = Instance.new("Model")
                 plant.Name = seed
                 
-                -- Caule com design melhorado
+                -- Caule
                 local stem = Instance.new("Part")
                 stem.Name = "Stem"
                 stem.Size = Vector3.new(0.5, 3 * size, 0.5)
@@ -172,24 +352,12 @@ createBtn.Click:Connect(function()
                 stem.Material = Enum.Material.Wood
                 stem.Parent = plant
                 
-                -- Folhas com design 3D
-                local leaves = Instance.new("Part")
-                leaves.Name = "Leaves"
-                leaves.Shape = Enum.PartType.Ball
-                leaves.Size = Vector3.new(2 * size, 2 * size, 2 * size)
-                leaves.Position = stem.Position + Vector3.new(0, stem.Size.Y/2 + leaves.Size.Y/2, 0)
-                leaves.BrickColor = BrickColor.new("Lime green")
-                leaves.Transparency = 0.3
-                leaves.Anchored = true
-                leaves.CanCollide = false
-                leaves.Parent = plant
-                
-                -- Fruta com design aprimorado
+                -- Fruta
                 local fruit = Instance.new("Part")
                 fruit.Name = "Fruit"
                 fruit.Shape = Enum.PartType.Ball
                 fruit.Size = Vector3.new(1.5 * size, 1.5 * size, 1.5 * size)
-                fruit.Position = leaves.Position
+                fruit.Position = stem.Position + Vector3.new(0, stem.Size.Y/2 + fruit.Size.Y/2, 0)
                 fruit.Anchored = true
                 fruit.CanCollide = false
                 fruit.Color = GardenConfig.SeedData[seed].color
@@ -228,6 +396,18 @@ createBtn.Click:Connect(function()
                 end
                 
                 fruit.Parent = plant
+                
+                -- Folhas
+                local leaves = Instance.new("Part")
+                leaves.Name = "Leaves"
+                leaves.Shape = Enum.PartType.Ball
+                leaves.Size = Vector3.new(2 * size, 0.5 * size, 2 * size)
+                leaves.Position = fruit.Position - Vector3.new(0, fruit.Size.Y/2 + leaves.Size.Y/2, 0)
+                leaves.BrickColor = BrickColor.new("Lime green")
+                leaves.Transparency = 0.3
+                leaves.Anchored = true
+                leaves.CanCollide = false
+                leaves.Parent = plant
                 
                 -- Informações da planta
                 local billboard = Instance.new("BillboardGui")
@@ -293,16 +473,18 @@ createBtn.Click:Connect(function()
             return module
         ]]
     }, ReplicatedStorage)
+end
 
-    -- =============== SCRIPT PRINCIPAL DO SERVIDOR ===============
-    local GardenMain = safeCreate("Script", {
+-- Script principal do servidor
+local function createGardenMain()
+    return safeCreate("Script", {
         Name = "GardenMain",
         Source = [[
             local DataStoreService = game:GetService("DataStoreService")
             local Players = game:GetService("Players")
             local GardenConfig = require(game.ReplicatedStorage:WaitForChild("GardenConfig"))
             local GardenUtils = require(game.ReplicatedStorage:WaitForChild("GardenUtils"))
-            local TextChatService = game:GetService("TextChatService")
+            local MarketplaceService = game:GetService("MarketplaceService")
             
             local Gardens = Instance.new("Folder")
             Gardens.Name = "Gardens"
@@ -324,10 +506,6 @@ createBtn.Click:Connect(function()
             local BuySeed = createRemote("BuySeed")
             local SellFruit = createRemote("SellFruit")
             local BuyTool = createRemote("BuyTool")
-            local StealFruit = createRemote("StealFruit")
-            local AdminGetSeed = createRemote("AdminGetSeed")
-            local AdminGiveMoney = createRemote("AdminGiveMoney")
-            local AdminResetGarden = createRemote("AdminResetGarden")
             local ShopReset = createRemote("ShopReset")
             local UpdateUI = createRemote("UpdateUI")
             local NotifyPlayer = createRemote("NotifyPlayer")
@@ -440,68 +618,6 @@ createBtn.Click:Connect(function()
                 end
             end)
             
-            -- Sistema de comandos de admin via chat
-            local function processAdminCommand(player, message)
-                if not table.find(GardenConfig.AdminIDs, player.UserId) then
-                    return
-                end
-                
-                local args = string.split(message, " ")
-                if #args < 2 then return end
-                
-                if args[1] == "!givemoney" and #args >= 3 then
-                    local targetName = args[2]
-                    local amount = tonumber(args[3])
-                    local target = Players:FindFirstChild(targetName)
-                    if target and playerData[target] then
-                        playerData[target].money = playerData[target].money + amount
-                        target:SetAttribute("Money", playerData[target].money)
-                        UpdateUI:FireClient(target)
-                        NotifyPlayer:FireClient(target, "Admin te deu $" .. amount, Color3.new(0, 1, 0))
-                    end
-                elseif args[1] == "!giveseed" and #args >= 3 then
-                    local targetName = args[2]
-                    local seedType = args[3]
-                    local amount = tonumber(args[4]) or 1
-                    local target = Players:FindFirstChild(targetName)
-                    if target and playerData[target] then
-                        playerData[target].seeds[seedType] = (playerData[target].seeds[seedType] or 0) + amount
-                        UpdateUI:FireClient(target)
-                        NotifyPlayer:FireClient(target, "Admin te deu " .. amount .. " sementes de " .. seedType, Color3.new(0, 1, 0))
-                    end
-                elseif args[1] == "!resetgarden" and #args >= 2 then
-                    local targetName = args[2]
-                    local target = Players:FindFirstChild(targetName)
-                    if target and playerData[target] then
-                        local garden = Gardens:FindFirstChild(target.UserId)
-                        if garden then
-                            garden:ClearAllChildren()
-                        end
-                        playerData[target].garden = {}
-                        UpdateUI:FireClient(target)
-                        NotifyPlayer:FireClient(target, "Seu jardim foi resetado por um admin", Color3.new(1, 0.5, 0))
-                    end
-                elseif args[1] == "!premium" and #args >= 3 then
-                    local targetName = args[2]
-                    local state = args[3]:lower() == "true"
-                    local target = Players:FindFirstChild(targetName)
-                    if target and playerData[target] then
-                        playerData[target].isPremium = state
-                        target:SetAttribute("Premium", state)
-                        UpdateUI:FireClient(target)
-                        NotifyPlayer:FireClient(target, "Status Premium: " .. tostring(state), Color3.new(1, 0.8, 0))
-                    end
-                end
-            end
-            
-            Players.PlayerAdded:Connect(function(player)
-                player.Chatted:Connect(function(message)
-                    if string.sub(message, 1, 1) == "!" then
-                        processAdminCommand(player, message)
-                    end
-                end)
-            end)
-            
             PlantSeed.OnServerEvent:Connect(function(player, seedType, position)
                 local data = playerData[player]
                 if not data then return end
@@ -565,6 +681,8 @@ createBtn.Click:Connect(function()
                     
                     UpdateUI:FireClient(player)
                     NotifyPlayer:FireClient(player, "Semente de " .. seedType .. " plantada!", Color3.new(0, 1, 0))
+                else
+                    NotifyPlayer:FireClient(player, "Você não tem sementes de " .. seedType, Color3.new(1, 0.5, 0.5))
                 end
             end)
             
@@ -601,18 +719,14 @@ createBtn.Click:Connect(function()
                 local seedData = GardenConfig.SeedData[seedType]
                 if not seedData then return end
                 
-                if seedData.robux then
-                    MarketplaceService:PromptProductPurchase(player, seedData.price)
+                if data.money >= seedData.price then
+                    data.money = data.money - seedData.price
+                    data.seeds[seedType] = (data.seeds[seedType] or 0) + 1
+                    player:SetAttribute("Money", data.money)
+                    UpdateUI:FireClient(player)
+                    NotifyPlayer:FireClient(player, "Compra realizada: " .. seedType, Color3.new(0.5, 1, 0.5))
                 else
-                    if data.money >= seedData.price then
-                        data.money = data.money - seedData.price
-                        data.seeds[seedType] = (data.seeds[seedType] or 0) + 1
-                        player:SetAttribute("Money", data.money)
-                        UpdateUI:FireClient(player)
-                        NotifyPlayer:FireClient(player, "Compra realizada: " .. seedType, Color3.new(0.5, 1, 0.5))
-                    else
-                        NotifyPlayer:FireClient(player, "Dinheiro insuficiente!", Color3.new(1, 0.5, 0.5))
-                    end
+                    NotifyPlayer:FireClient(player, "Dinheiro insuficiente!", Color3.new(1, 0.5, 0.5))
                 end
             end)
             
@@ -654,50 +768,14 @@ createBtn.Click:Connect(function()
             end)
         ]]
     }, game.ServerScriptService)
+end
 
-    -- =============== MODELOS DE SEMENTES/FRUTAS ===============
-    local serverStorage = game:GetService("ServerStorage")
-    
-    local seedModels = safeCreate("Folder", {Name = "SeedModels"}, serverStorage)
-    local fruitModels = safeCreate("Folder", {Name = "FruitModels"}, serverStorage)
-    
-    local GardenConfig = require(GardenConfig)
-    for seedName, seedData in pairs(GardenConfig.SeedData) do
-        -- Modelo de semente
-        local seedModel = safeCreate("Model", {Name = seedName}, seedModels)
-        
-        local seedPart = safeCreate("Part", {
-            Name = "Seed",
-            Size = Vector3.new(0.5, 0.5, 0.5),
-            Color = seedData.color,
-            Material = Enum.Material.SmoothPlastic,
-            Anchored = false,
-            CanCollide = true
-        }, seedModel)
-        
-        safeCreate("ClickDetector", {Name = "ClickDetector"}, seedPart)
-        
-        -- Modelo de fruta
-        local fruitModel = safeCreate("Model", {Name = seedName}, fruitModels)
-        
-        local fruitPart = safeCreate("Part", {
-            Name = "Fruit",
-            Size = Vector3.new(1, 1, 1),
-            Shape = Enum.PartType.Ball,
-            Color = seedData.color,
-            Material = Enum.Material.Neon,
-            Anchored = false,
-            CanCollide = true
-        }, fruitModel)
-        
-        safeCreate("ClickDetector", {Name = "ClickDetector"}, fruitPart)
-    end
-
-    -- =============== INTERFACE DO USUÁRIO ===============
+-- Interface do usuário
+local function createPlayerUI()
     local PlayerUI = safeCreate("ScreenGui", {
         Name = "GardenUI",
         ResetOnSpawn = false
-    }, game.StarterGui)
+    }, StarterGui)
     
     -- Notificações
     local notificationFrame = safeCreate("Frame", {
@@ -708,7 +786,7 @@ createBtn.Click:Connect(function()
         ClipsDescendants = true
     }, PlayerUI)
     
-    local notificationTemplate = safeCreate("TextLabel", {
+    safeCreate("TextLabel", {
         Name = "NotificationTemplate",
         Size = UDim2.new(1, 0, 0.2, 0),
         BackgroundTransparency = 0.5,
@@ -790,6 +868,7 @@ createBtn.Click:Connect(function()
     }, contentFrame)
     
     local seedsScroller = safeCreate("ScrollingFrame", {
+        Name = "SeedsScroller",
         Size = UDim2.new(0.95, 0, 0.9, 0),
         Position = UDim2.new(0.025, 0, 0.05, 0),
         BackgroundTransparency = 1,
@@ -806,6 +885,7 @@ createBtn.Click:Connect(function()
     }, contentFrame)
     
     local toolsScroller = safeCreate("ScrollingFrame", {
+        Name = "ToolsScroller",
         Size = UDim2.new(0.95, 0, 0.9, 0),
         Position = UDim2.new(0.025, 0, 0.05, 0),
         BackgroundTransparency = 1,
@@ -821,7 +901,8 @@ createBtn.Click:Connect(function()
         Visible = false
     }, contentFrame)
     
-    local premiumLabel = safeCreate("TextLabel", {
+    safeCreate("TextLabel", {
+        Name = "PremiumLabel",
         Text = "BENEFÍCIOS PREMIUM",
         Size = UDim2.new(1, 0, 0.2, 0),
         Position = UDim2.new(0, 0, 0.1, 0),
@@ -842,6 +923,7 @@ createBtn.Click:Connect(function()
             local UpdateUI = GardenRemotes:WaitForChild("UpdateUI")
             local ShopReset = GardenRemotes:WaitForChild("ShopReset")
             local NotifyPlayer = GardenRemotes:WaitForChild("NotifyPlayer")
+            local PlantSeed = GardenRemotes:WaitForChild("PlantSeed")
             local GardenConfig = require(ReplicatedStorage:WaitForChild("GardenConfig"))
             
             local ui = PlayerGui:WaitForChild("GardenUI")
@@ -850,12 +932,12 @@ createBtn.Click:Connect(function()
             local notificationFrame = ui:WaitForChild("Notifications")
             
             -- Elementos das abas
-            local seedsFrame = mainFrame:FindFirstChild("ContentFrame"):WaitForChild("SeedsFrame")
-            local toolsFrame = mainFrame:FindFirstChild("ContentFrame"):WaitForChild("ToolsFrame")
-            local premiumFrame = mainFrame:FindFirstChild("ContentFrame"):WaitForChild("PremiumFrame")
+            local seedsFrame = mainFrame:WaitForChild("ContentFrame"):WaitForChild("SeedsFrame")
+            local toolsFrame = mainFrame:WaitForChild("ContentFrame"):WaitForChild("ToolsFrame")
+            local premiumFrame = mainFrame:WaitForChild("ContentFrame"):WaitForChild("PremiumFrame")
             
-            local seedsScroller = seedsFrame:WaitForChild("ScrollingFrame")
-            local toolsScroller = toolsFrame:WaitForChild("ScrollingFrame")
+            local seedsScroller = seedsFrame:WaitForChild("SeedsScroller")
+            local toolsScroller = toolsFrame:WaitForChild("ToolsScroller")
             
             -- Sistema de notificações
             local function showNotification(text, color)
@@ -1032,8 +1114,7 @@ createBtn.Click:Connect(function()
                     benefits = benefits .. "• " .. displayName .. ": " .. tostring(value) .. "\n"
                 end
                 
-                local premiumText = "BENEFÍCIOS PREMIUM:\n\n" .. benefits
-                premiumFrame:WaitForChild("TextLabel").Text = premiumText
+                premiumFrame.PremiumLabel.Text = "BENEFÍCIOS PREMIUM:\n\n" .. benefits
             end
             
             -- Inicialização
@@ -1077,6 +1158,29 @@ createBtn.Click:Connect(function()
                 end
             end)
             
+            -- Sistema de plantio
+            local function setupPlanting()
+                for _, plot in ipairs(workspace:GetChildren()) do
+                    if plot.Name == "GardenPlot" then
+                        local prompt = plot:FindFirstChildOfClass("ProximityPrompt")
+                        if prompt then
+                            prompt.Triggered:Connect(function(player)
+                                if player == Player then
+                                    -- Verificar se o jogador tem sementes
+                                    local seeds = Player:GetAttribute("Seeds")
+                                    if seeds and next(seeds) then
+                                        -- Abrir menu de seleção de sementes
+                                        mainFrame.Visible = true
+                                    else
+                                        showNotification("Você não tem sementes!", Color3.new(1, 0.5, 0.5))
+                                    end
+                                end
+                            end)
+                        end
+                    end
+                end
+            end
+            
             -- Botão de admin para jogadores autorizados
             if table.find(GardenConfig.AdminIDs, Player.UserId) then
                 local adminBtn = Instance.new("TextButton")
@@ -1088,134 +1192,51 @@ createBtn.Click:Connect(function()
                 adminBtn.Font = Enum.Font.GothamBold
                 adminBtn.TextSize = 16
                 adminBtn.Parent = ui
-                
-                adminBtn.MouseButton1Click:Connect(function()
-                    -- Implementar painel admin
-                end)
             end
+            
+            -- Inicializar
+            setupPlanting()
         ]]
     }, PlayerUI)
+end
 
-    -- =============== AMBIENTE DO JARDIM ===============
-    -- Área principal
-    local gardenArea = safeCreate("Part", {
-        Name = "GardenArea",
-        Size = Vector3.new(200, 1, 200),
-        Position = Vector3.new(0, 0, 0),
-        Anchored = true,
-        Color = Color3.fromRGB(34, 139, 34),
-        Material = Enum.Material.Grass
-    }, workspace)
+-- Função principal para criar o jardim
+createBtn.Click:Connect(function()
+    -- Criar tela de carregamento
+    local loadingScreen = createLoadingScreen()
+    loadingScreen.update("Criando configurações...", 0.1)
+    wait(0.5)
     
-    -- Canteiros
-    for x = -80, 80, 20 do
-        for z = -80, 80, 20 do
-            local plot = safeCreate("Part", {
-                Name = "GardenPlot",
-                Size = Vector3.new(10, 1, 10),
-                Position = Vector3.new(x, 0.5, z),
-                Anchored = true,
-                Color = Color3.fromRGB(101, 67, 33),
-                Material = Enum.Material.WoodPlanks
-            }, workspace)
-            
-            safeCreate("BoxHandleAdornment", {
-                Size = Vector3.new(10.1, 0.2, 10.1),
-                Color3 = Color3.new(0,1,0),
-                Transparency = 0.7,
-                Adornee = plot,
-                AlwaysOnTop = true,
-                ZIndex = 1
-            }, plot)
-            
-            safeCreate("ProximityPrompt", {
-                ActionText = "Plantar",
-                ObjectText = "Canteiro Premium",
-                HoldDuration = 1
-            }, plot)
-        end
-    end
-
-    -- Loja
-    local shopStand = safeCreate("Part", {
-        Name = "SeedShop",
-        Size = Vector3.new(15, 10, 15),
-        Position = Vector3.new(0, 5, 100),
-        Anchored = true,
-        Color = Color3.fromRGB(30, 144, 255),
-        Material = Enum.Material.Neon
-    }, workspace)
+    -- Configuração principal
+    createGardenConfig()
+    loadingScreen.update("Criando utilitários...", 0.2)
+    wait(0.5)
     
-    local shopSign = safeCreate("BillboardGui", {
-        Size = UDim2.new(10, 0, 3, 0),
-        Adornee = shopStand,
-        AlwaysOnTop = true,
-        ExtentsOffset = Vector3.new(0, 8, 0)
-    }, shopStand)
+    -- Módulo de utilidades
+    createGardenUtils()
+    loadingScreen.update("Criando script principal...", 0.3)
+    wait(0.5)
     
-    safeCreate("TextLabel", {
-        Size = UDim2.new(1, 0, 1, 0),
-        Text = "MERCADO PREMIUM",
-        BackgroundTransparency = 1,
-        TextColor3 = Color3.new(1,1,1),
-        Font = Enum.Font.GothamBold,
-        TextSize = 28
-    }, shopSign)
+    -- Script principal
+    createGardenMain()
+    loadingScreen.update("Criando interface...", 0.4)
+    wait(0.5)
     
-    local shopPrompt = safeCreate("ProximityPrompt", {
-        ActionText = "Comprar Sementes",
-        ObjectText = "Loja Premium",
-        HoldDuration = 0.5
-    }, shopStand)
+    -- Interface do usuário
+    createPlayerUI()
+    loadingScreen.update("Gerando mapa...", 0.6)
+    wait(0.5)
     
-    shopPrompt.Triggered:Connect(function(player)
-        player.PlayerGui.GardenUI.MainFrame.Visible = true
-    end)
-
-    -- Decoração
-    local function createTree(position)
-        local trunk = safeCreate("Part", {
-            Size = Vector3.new(3, 12, 3),
-            Position = position + Vector3.new(0, 6, 0),
-            Anchored = true,
-            Color = Color3.fromRGB(101, 67, 33),
-            Material = Enum.Material.Wood
-        }, workspace)
-        
-        local leaves = safeCreate("Part", {
-            Size = Vector3.new(12, 12, 12),
-            Position = position + Vector3.new(0, 18, 0),
-            Anchored = true,
-            Color = Color3.fromRGB(34, 139, 34),
-            Shape = Enum.PartType.Ball
-        }, workspace)
-    end
+    -- Gerar mapa
+    createGardenMap()
+    loadingScreen.update("Finalizando...", 0.9)
+    wait(1)
     
-    createTree(Vector3.new(50, 0, 50))
-    createTree(Vector3.new(-50, 0, 50))
-    createTree(Vector3.new(50, 0, -50))
-    createTree(Vector3.new(-50, 0, -50))
-    
-    -- Fonte central
-    local fountain = safeCreate("Part", {
-        Size = Vector3.new(15, 2, 15),
-        Position = Vector3.new(0, 1, 0),
-        Anchored = true,
-        Color = Color3.fromRGB(200, 200, 200),
-        Material = Enum.Material.Marble
-    }, workspace)
-    
-    local water = safeCreate("Part", {
-        Size = Vector3.new(12, 1, 12),
-        Position = Vector3.new(0, 2.5, 0),
-        Anchored = true,
-        Transparency = 0.5,
-        Color = Color3.fromRGB(100, 200, 255),
-        Material = Enum.Material.Water
-    }, workspace)
+    -- Remover tela de carregamento
+    loadingScreen.gui:Destroy()
     
     -- Notificação final
-    game.StarterGui:SetCore("SendNotification", {
+    StarterGui:SetCore("SendNotification", {
         Title = "Jardim Premium V2 Criado!",
         Text = "Pressione B para abrir a loja de sementes",
         Duration = 8,
@@ -1223,8 +1244,9 @@ createBtn.Click:Connect(function()
     })
 end)
 
+-- Função para remover o jardim
 removeBtn.Click:Connect(function()
-    -- Função para remover elementos com segurança
+    -- Remover elementos com segurança
     local function safeDestroy(obj)
         pcall(function()
             if obj then
@@ -1250,15 +1272,11 @@ removeBtn.Click:Connect(function()
     safeDestroy(ReplicatedStorage:FindFirstChild("GardenUtils"))
     safeDestroy(ReplicatedStorage:FindFirstChild("GardenRemotes"))
     safeDestroy(game.ServerScriptService:FindFirstChild("GardenMain"))
-    safeDestroy(game.StarterGui:FindFirstChild("GardenUI"))
-    
-    -- Remover modelos
-    local serverStorage = game:GetService("ServerStorage")
-    safeDestroy(serverStorage:FindFirstChild("SeedModels"))
-    safeDestroy(serverStorage:FindFirstChild("FruitModels"))
+    safeDestroy(StarterGui:FindFirstChild("GardenUI"))
+    safeDestroy(StarterGui:FindFirstChild("LoadingScreen"))
     
     -- Notificação de remoção
-    game.StarterGui:SetCore("SendNotification", {
+    StarterGui:SetCore("SendNotification", {
         Title = "Jardim Removido",
         Text = "Todos os elementos foram removidos com sucesso",
         Duration = 5
