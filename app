@@ -1,67 +1,101 @@
-rootProject.name = "GardenApp" include(":app")
+# Garden Tycoon Game in Python (using Pygame)
 
-plugins { kotlin("jvm") version "1.8.0" apply false id("com.android.application") version "8.1.0" apply false }
+import pygame
+import random
+import time
 
-plugins { id("com.android.application") kotlin("android") kotlin("kapt") }
+# Init
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("Garden Tycoon V2")
+clock = pygame.time.Clock()
 
-android { compileSdk = 34 defaultConfig { applicationId = "com.cleasantosinc.gardenapp" minSdk = 26 targetSdk = 34 versionCode = 1 versionName = "1.0" } buildFeatures { compose = true } composeOptions { kotlinCompilerExtensionVersion = "1.4.8" } kotlinOptions { jvmTarget = "1.8" } }
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREEN = (0, 200, 0)
+BROWN = (139, 69, 19)
 
-dependencies { implementation("androidx.core:core-ktx:1.10.1") implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1") implementation("androidx.activity:activity-compose:1.7.2") implementation("androidx.compose.ui:ui:1.4.3") implementation("androidx.compose.material:material:1.4.3") implementation("androidx.room:room-runtime:2.5.2") kapt("androidx.room:room-compiler:2.5.2") implementation("androidx.room:room-ktx:2.5.2") implementation("com.squareup.retrofit2:retrofit:2.9.0") implementation("com.squareup.retrofit2:converter-moshi:2.9.0") implementation("com.squareup.moshi:moshi-kotlin:1.14.0") implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4") }
+# Font
+font = pygame.font.SysFont("Arial", 24)
 
-package com.cleasantosinc.gardenapp.data.models
+# Global Game Data
+player_money = 100
+seeds = {
+    "Carrot": {"price": 5, "growth": 30, "color": (255, 165, 0)},
+    "Apple": {"price": 10, "growth": 60, "color": (255, 0, 0)},
+    "Banana": {"price": 12, "growth": 70, "color": (255, 255, 0)},
+    "Rare1": {"price": 0, "growth": 120, "color": (138, 43, 226), "rarity": "Event"},
+    "SuperSeed": {"price": 0, "growth": 20, "color": (255, 105, 180), "rarity": "Robux"},
+}
+plots = []
+selected_seed = None
 
-data class Plant( val id: Long, val gardenId: Long, val speciesId: Int, val growthStage: Int, val plantedAt: String, val lastWatered: String? )
+# Plot class
+class Plot:
+    def __init__(self, x, y):
+        self.rect = pygame.Rect(x, y, 60, 60)
+        self.seed = None
+        self.planted_time = None
 
-package com.cleasantosinc.gardenapp.data.local.entities
+    def draw(self):
+        pygame.draw.rect(screen, BROWN, self.rect)
+        if self.seed:
+            growth = (time.time() - self.planted_time) / seeds[self.seed]["growth"]
+            growth = min(growth, 1)
+            color = seeds[self.seed]["color"]
+            pygame.draw.rect(screen, color, self.rect.inflate(-20, -20 * (1 - growth)))
 
-import androidx.room.Entity import androidx.room.PrimaryKey
+    def plant(self, seed_name):
+        if self.seed is None:
+            self.seed = seed_name
+            self.planted_time = time.time()
 
-@Entity(tableName = "plants") data class PlantEntity( @PrimaryKey val id: Long, val gardenId: Long, val speciesId: Int, val growthStage: Int, val plantedAt: Long, val lastWatered: Long? )
+# Draw UI
+def draw_ui():
+    money_text = font.render(f"Money: ${player_money}", True, WHITE)
+    screen.blit(money_text, (10, 10))
+    y = 50
+    for name, data in seeds.items():
+        btn = pygame.Rect(10, y, 150, 30)
+        pygame.draw.rect(screen, GREEN if selected_seed == name else WHITE, btn)
+        text = font.render(f"{name} (${data['price']})", True, BLACK)
+        screen.blit(text, (15, y + 5))
+        seed_buttons.append((btn, name))
+        y += 40
 
-package com.cleasantosinc.gardenapp.data.local.dao
+# Game Setup
+for i in range(5):
+    for j in range(3):
+        plots.append(Plot(200 + i * 70, 300 + j * 70))
 
-import androidx.room.* import com.cleasantosinc.gardenapp.data.local.entities.PlantEntity
+# Game Loop
+running = True
+seed_buttons = []
+while running:
+    screen.fill((0, 100, 0))
+    seed_buttons.clear()
 
-@Dao interface PlantDao { @Query("SELECT * FROM plants WHERE gardenId = :gardenId") suspend fun getPlants(gardenId: Long): List<PlantEntity> @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertPlants(plants: List<PlantEntity>) @Update suspend fun updatePlant(plant: PlantEntity) @Delete suspend fun deletePlant(plant: PlantEntity) }
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-package com.cleasantosinc.gardenapp.data.local
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            for btn, name in seed_buttons:
+                if btn.collidepoint(mx, my):
+                    selected_seed = name
+            for plot in plots:
+                if plot.rect.collidepoint(mx, my):
+                    if selected_seed and player_money >= seeds[selected_seed]["price"]:
+                        plot.plant(selected_seed)
+                        player_money -= seeds[selected_seed]["price"]
 
-import androidx.room.Database import androidx.room.RoomDatabase import com.cleasantosinc.gardenapp.data.local.dao.PlantDao import com.cleasantosinc.gardenapp.data.local.entities.PlantEntity
+    draw_ui()
+    for plot in plots:
+        plot.draw()
 
-@Database(entities = [PlantEntity::class], version = 1) abstract class AppDatabase : RoomDatabase() { abstract fun plantDao(): PlantDao }
+    pygame.display.flip()
+    clock.tick(30)
 
-package com.cleasantosinc.gardenapp.data.remote
-
-import com.cleasantosinc.gardenapp.data.models.Plant import retrofit2.http.*
-
-interface ApiService { @GET("/api/gardens/{id}/plants") suspend fun fetchPlants(@Path("id") gardenId: Long): List<Plant> @POST("/api/garden/{id}/plant") suspend fun plantSeed(@Path("id") gardenId: Long, @Body payload: Map<String, Any>): Plant @PUT("/api/plant/{id}") suspend fun updatePlant(@Path("id") plantId: Long, @Body payload: Map<String, Any>): Plant @DELETE("/api/plant/{id}") suspend fun deletePlant(@Path("id") plantId: Long) }
-
-package com.cleasantosinc.gardenapp.data.repository
-
-import com.cleasantosinc.gardenapp.data.local.dao.PlantDao import com.cleasantosinc.gardenapp.data.local.entities.PlantEntity import com.cleasantosinc.gardenapp.data.models.Plant import com.cleasantosinc.gardenapp.data.remote.ApiService import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.withContext
-
-class GardenRepository( private val api: ApiService, private val dao: PlantDao ) { suspend fun getPlants(gardenId: Long): List<Plant> = withContext(Dispatchers.IO) { val local = dao.getPlants(gardenId) if (local.isNotEmpty()) local.map { it.toModel() } else fetchAndCache(gardenId) } private suspend fun fetchAndCache(gardenId: Long): List<Plant> { val remote = api.fetchPlants(gardenId) dao.insertPlants(remote.map { it.toEntity() }) return remote } suspend fun plantSeed(gardenId: Long, speciesId: Int): Plant = withContext(Dispatchers.IO) { val plant = api.plantSeed(gardenId, mapOf("speciesId" to speciesId)) dao.insertPlants(listOf(plant.toEntity())) plant } suspend fun updatePlant(plant: Plant) = withContext(Dispatchers.IO) { val updated = api.updatePlant(plant.id, mapOf("growthStage" to plant.growthStage, "lastWatered" to plant.lastWatered)) dao.updatePlant(updated.toEntity()) } suspend fun deletePlant(plantId: Long) = withContext(Dispatchers.IO) { api.deletePlant(plantId) dao.deletePlant(PlantEntity(plantId,0,0,0,0,null)) } }
-
-package com.cleasantosinc.gardenapp.data
-
-import com.cleasantosinc.gardenapp.data.local.entities.PlantEntity import com.cleasantosinc.gardenapp.data.models.Plant import java.time.Instant
-
-fun PlantEntity.toModel() = Plant( id = id, gardenId = gardenId, speciesId = speciesId, growthStage = growthStage, plantedAt = Instant.ofEpochMilli(plantedAt).toString(), lastWatered = lastWatered?.let { Instant.ofEpochMilli(it).toString() } ) fun Plant.toEntity() = PlantEntity( id = id, gardenId = gardenId, speciesId = speciesId, growthStage = growthStage, plantedAt = Instant.parse(plantedAt).toEpochMilli(), lastWatered = lastWatered?.let { Instant.parse(it).toEpochMilli() } )
-
-package com.cleasantosinc.gardenapp.sync
-
-import com.cleasantosinc.gardenapp.data.repository.GardenRepository import kotlinx.coroutines.*
-
-class SyncManager( private val repository: GardenRepository ) { private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob()) fun startAutoSync(gardenId: Long, intervalMs: Long = 5000L){ scope.launch { while(isActive){ repository.getPlants(gardenId); delay(intervalMs) } } } fun stop(){ scope.cancel() } }
-
-package com.cleasantosinc.gardenapp.ui
-
-import androidx.compose.foundation.background import androidx.compose.foundation.clickable import androidx.compose.foundation.layout.* import androidx.compose.foundation.lazy.grid.GridCells import androidx.compose.foundation.lazy.grid.LazyVerticalGrid import androidx.compose.material.Card import androidx.compose.material.Text import androidx.compose.runtime.* import androidx.compose.ui.Alignment import androidx.compose.ui.Modifier import androidx.compose.ui.unit.dp
-
-@Composable fun IsometricGridScreen(plants: List<Long>, onTileClick: (Long) -> Unit){ LazyVerticalGrid(columns = GridCells.Fixed(5), modifier = Modifier.fillMaxSize()){ items(plants.size){ index -> Card(modifier=Modifier.padding(4.dp).size(60.dp).clickable { onTileClick(plants[index]) }){ Box(contentAlignment = Alignment.Center, modifier = Modifier.background(androidx.compose.ui.graphics.Color.Green)){ Text(text = plants[index].toString()) } }} } }
-
-package com.cleasantosinc.gardenapp.ui
-
-import android.os.Bundle import androidx.activity.ComponentActivity import androidx.activity.compose.setContent import androidx.lifecycle.lifecycleScope import com.cleasantosinc.gardenapp.data.local.AppDatabase import com.cleasantosinc.gardenapp.data.remote.ApiService import com.cleasantosinc.gardenapp.data.repository.GardenRepository import com.cleasantosinc.gardenapp.sync.SyncManager import retrofit2.Retrofit import retrofit2.converter.moshi.MoshiConverterFactory import kotlinx.coroutines.launch
-
-class MainActivity : ComponentActivity(){ private val api by lazy { Retrofit.Builder().baseUrl("https://rrq-n.h.filess.io:3307").addConverterFactory(MoshiConverterFactory.create()).build().create(ApiService::class.java) } private val db by lazy { AppDatabase.getInstance(this) } private val repo by lazy { GardenRepository(api, db.plantDao()) } private val sync by lazy { SyncManager(repo) } override fun onCreate(savedInstanceState: Bundle?){ super.onCreate(savedInstanceState) setContent { var plants by remember { mutableStateOf(listOf<Long>()) } IsometricGridScreen(plants){ } lifecycleScope.launch { plants = repo.getPlants(1).map { it.id } } sync.startAutoSync(1) } } override fun onDestroy(){ super.onDestroy(); sync.stop() } }
+pygame.quit()
