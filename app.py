@@ -1,4 +1,10 @@
-import pygame import sys import random import json import os import traceback import hashlib
+import pygame
+import sys
+import random
+import json
+import os
+import traceback
+import hashlib
 
 SAVE_FILE = 'savegame.json' KEYBIND_FILE = 'keybinds.json' SETTINGS_FILE = 'settings.json' ASSET_DIR = 'assets' WIDTH, HEIGHT = 800, 600 FPS = 60
 
