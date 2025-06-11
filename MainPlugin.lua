@@ -11,27 +11,25 @@ local toolbar = plugin:CreateToolbar("Jardim Premium")
 local createBtn = toolbar:CreateButton("Criar Jardim", "Inicializa o sistema premium", "rbxassetid://7078459360")
 local removeBtn = toolbar:CreateButton("Remover Jardim", "Remove todos os elementos", "rbxassetid://7078459887")
 
--- Função segura para criar instâncias
+-- Improved safe instance creation with error handling
 local function safeCreate(instanceType, props, parent)
-    local success, result = pcall(function()
-        local obj = Instance.new(instanceType)
+    local obj
+    local success, err = pcall(function()
+        obj = Instance.new(instanceType)
         for prop, value in pairs(props) do
             obj[prop] = value
         end
-        if parent then
-            obj.Parent = parent
-        end
-        return obj
+        obj.Parent = parent
     end)
     
     if not success then
-        warn("Erro ao criar instância: " .. result)
+        warn("Erro ao criar instância: " .. err)
         return nil
     end
-    return result
+    return obj
 end
 
--- Tela de carregamento
+-- Optimized loading screen creation
 local function createLoadingScreen()
     local loadingScreen = safeCreate("ScreenGui", {
         Name = "LoadingScreen",
@@ -45,7 +43,7 @@ local function createLoadingScreen()
         ZIndex = 10
     }, loadingScreen)
     
-    local logo = safeCreate("ImageLabel", {
+    safeCreate("ImageLabel", {
         Image = "rbxassetid://7078461234",
         Size = UDim2.new(0.3, 0, 0.15, 0),
         Position = UDim2.new(0.35, 0, 0.2, 0),
@@ -71,7 +69,7 @@ local function createLoadingScreen()
         Size = UDim2.new(1, 0, 0.05, 0),
         Position = UDim2.new(0, 0, 0.65, 0),
         BackgroundTransparency = 1,
-        TextColor3 = Color3.new(1,1,1),
+        TextColor3 = Color3.new(1, 1, 1),
         Font = Enum.Font.Gotham,
         TextSize = 20,
         ZIndex = 11
@@ -86,9 +84,9 @@ local function createLoadingScreen()
     }
 end
 
--- Sistema de geração do mapa
+-- Optimized garden map creation
 local function createGardenMap()
-    -- Área principal
+    -- Main garden area
     local gardenArea = safeCreate("Part", {
         Name = "GardenArea",
         Size = Vector3.new(200, 1, 200),
@@ -98,7 +96,7 @@ local function createGardenMap()
         Material = Enum.Material.Grass
     }, Workspace)
     
-    -- Canteiros
+    -- Garden plots
     local plots = {}
     for x = -80, 80, 20 do
         for z = -80, 80, 20 do
@@ -113,14 +111,14 @@ local function createGardenMap()
             
             safeCreate("BoxHandleAdornment", {
                 Size = Vector3.new(10.1, 0.2, 10.1),
-                Color3 = Color3.new(0,1,0),
+                Color3 = Color3.new(0, 1, 0),
                 Transparency = 0.7,
                 Adornee = plot,
                 AlwaysOnTop = true,
                 ZIndex = 1
             }, plot)
             
-            local prompt = safeCreate("ProximityPrompt", {
+            safeCreate("ProximityPrompt", {
                 ActionText = "Plantar",
                 ObjectText = "Canteiro",
                 HoldDuration = 1,
@@ -131,7 +129,7 @@ local function createGardenMap()
         end
     end
     
-    -- Loja
+    -- Seed shop
     local shopStand = safeCreate("Part", {
         Name = "SeedShop",
         Size = Vector3.new(15, 10, 15),
@@ -152,21 +150,21 @@ local function createGardenMap()
         Size = UDim2.new(1, 0, 1, 0),
         Text = "MERCADO PREMIUM",
         BackgroundTransparency = 1,
-        TextColor3 = Color3.new(1,1,1),
+        TextColor3 = Color3.new(1, 1, 1),
         Font = Enum.Font.GothamBold,
         TextSize = 28
     }, shopSign)
     
-    local shopPrompt = safeCreate("ProximityPrompt", {
+    safeCreate("ProximityPrompt", {
         ActionText = "Abrir Loja",
         ObjectText = "Loja de Sementes",
         HoldDuration = 0.5,
         MaxActivationDistance = 20
     }, shopStand)
     
-    -- Decoração
+    -- Decoration
     local function createTree(position)
-        local trunk = safeCreate("Part", {
+        safeCreate("Part", {
             Size = Vector3.new(3, 12, 3),
             Position = position + Vector3.new(0, 6, 0),
             Anchored = true,
@@ -174,7 +172,7 @@ local function createGardenMap()
             Material = Enum.Material.Wood
         }, Workspace)
         
-        local leaves = safeCreate("Part", {
+        safeCreate("Part", {
             Size = Vector3.new(12, 12, 12),
             Position = position + Vector3.new(0, 18, 0),
             Anchored = true,
@@ -189,7 +187,7 @@ local function createGardenMap()
     createTree(Vector3.new(50, 0, -50))
     createTree(Vector3.new(-50, 0, -50))
     
-    -- Fonte central
+    -- Central fountain
     local fountain = safeCreate("Part", {
         Size = Vector3.new(15, 2, 15),
         Position = Vector3.new(0, 1, 0),
@@ -198,7 +196,7 @@ local function createGardenMap()
         Material = Enum.Material.Marble
     }, Workspace)
     
-    local water = safeCreate("Part", {
+    safeCreate("Part", {
         Size = Vector3.new(12, 1, 12),
         Position = Vector3.new(0, 2.5, 0),
         Anchored = true,
@@ -213,7 +211,7 @@ local function createGardenMap()
     }
 end
 
--- Configuração principal
+-- Fixed GardenConfig with proper string escaping
 local function createGardenConfig()
     return safeCreate("ModuleScript", {
         Name = "GardenConfig",
@@ -230,22 +228,22 @@ local function createGardenConfig()
                     Impossible = {chance = 0, valueMultiplier = 25.0, hidden = true}
                 },
                 SeedData = {
-                    ["Cenoura"] = {price = 5, rarity = "Common", yieldTime = 20, color = Color3.fromRGB(255, 127, 0), baseValue = 15},
-                    ["Maçã"] = {price = 15, rarity = "Common", yieldTime = 30, color = Color3.fromRGB(255, 0, 0), baseValue = 45},
-                    ["Banana"] = {price = 20, rarity = "Common", yieldTime = 40, color = Color3.fromRGB(255, 255, 0), baseValue = 60},
-                    ["Laranja"] = {price = 25, rarity = "Common", yieldTime = 45, color = Color3.fromRGB(255, 165, 0), baseValue = 75},
-                    ["Uva"] = {price = 30, rarity = "Common", yieldTime = 50, color = Color3.fromRGB(128, 0, 128), baseValue = 90},
-                    ["Morango"] = {price = 35, rarity = "Common", yieldTime = 55, color = Color3.fromRGB(255, 0, 0), baseValue = 105},
-                    ["Pêssego"] = {price = 50, rarity = "Uncommon", yieldTime = 60, color = Color3.fromRGB(255, 218, 185), baseValue = 150},
-                    ["Pera"] = {price = 60, rarity = "Uncommon", yieldTime = 65, color = Color3.fromRGB(173, 255, 47), baseValue = 180},
-                    ["Cereja"] = {price = 70, rarity = "Uncommon", yieldTime = 70, color = Color3.fromRGB(220, 20, 60), baseValue = 210},
-                    ["Limão"] = {price = 80, rarity = "Uncommon", yieldTime = 75, color = Color3.fromRGB(255, 255, 0), baseValue = 240},
-                    ["Manga"] = {price = 90, rarity = "Uncommon", yieldTime = 80, color = Color3.fromRGB(255, 165, 0), baseValue = 270},
-                    ["Abacaxi"] = {price = 120, rarity = "Rare", yieldTime = 85, color = Color3.fromRGB(173, 255, 47), baseValue = 360},
-                    ["Melancia"] = {price = 150, rarity = "Rare", yieldTime = 90, color = Color3.fromRGB(0, 100, 0), baseValue = 450},
-                    ["Kiwi"] = {price = 180, rarity = "Rare", yieldTime = 95, color = Color3.fromRGB(127, 255, 0), baseValue = 540},
-                    ["Coco"] = {price = 200, rarity = "Rare", yieldTime = 100, color = Color3.fromRGB(150, 75, 0), baseValue = 600},
-                    ["Framboesa"] = {price = 220, rarity = "Rare", yieldTime = 105, color = Color3.fromRGB(227, 11, 92), baseValue = 660},
+                    Cenoura = {price = 5, rarity = "Common", yieldTime = 20, color = Color3.fromRGB(255, 127, 0), baseValue = 15},
+                    Maçã = {price = 15, rarity = "Common", yieldTime = 30, color = Color3.fromRGB(255, 0, 0), baseValue = 45},
+                    Banana = {price = 20, rarity = "Common", yieldTime = 40, color = Color3.fromRGB(255, 255, 0), baseValue = 60},
+                    Laranja = {price = 25, rarity = "Common", yieldTime = 45, color = Color3.fromRGB(255, 165, 0), baseValue = 75},
+                    Uva = {price = 30, rarity = "Common", yieldTime = 50, color = Color3.fromRGB(128, 0, 128), baseValue = 90},
+                    Morango = {price = 35, rarity = "Common", yieldTime = 55, color = Color3.fromRGB(255, 0, 0), baseValue = 105},
+                    Pêssego = {price = 50, rarity = "Uncommon", yieldTime = 60, color = Color3.fromRGB(255, 218, 185), baseValue = 150},
+                    Pera = {price = 60, rarity = "Uncommon", yieldTime = 65, color = Color3.fromRGB(173, 255, 47), baseValue = 180},
+                    Cereja = {price = 70, rarity = "Uncommon", yieldTime = 70, color = Color3.fromRGB(220, 20, 60), baseValue = 210},
+                    Limão = {price = 80, rarity = "Uncommon", yieldTime = 75, color = Color3.fromRGB(255, 255, 0), baseValue = 240},
+                    Manga = {price = 90, rarity = "Uncommon", yieldTime = 80, color = Color3.fromRGB(255, 165, 0), baseValue = 270},
+                    Abacaxi = {price = 120, rarity = "Rare", yieldTime = 85, color = Color3.fromRGB(173, 255, 47), baseValue = 360},
+                    Melancia = {price = 150, rarity = "Rare", yieldTime = 90, color = Color3.fromRGB(0, 100, 0), baseValue = 450},
+                    Kiwi = {price = 180, rarity = "Rare", yieldTime = 95, color = Color3.fromRGB(127, 255, 0), baseValue = 540},
+                    Coco = {price = 200, rarity = "Rare", yieldTime = 100, color = Color3.fromRGB(150, 75, 0), baseValue = 600},
+                    Framboesa = {price = 220, rarity = "Rare", yieldTime = 105, color = Color3.fromRGB(227, 11, 92), baseValue = 660},
                     ["Fruta Dragão"] = {price = 350, rarity = "Epic", yieldTime = 150, color = Color3.fromRGB(255, 105, 180), baseValue = 1050},
                     ["Fruta Dourada"] = {price = 500, rarity = "Epic", yieldTime = 180, color = Color3.fromRGB(255, 215, 0), baseValue = 1500},
                     ["Fruta Cristal"] = {price = 600, rarity = "Epic", yieldTime = 200, color = Color3.fromRGB(173, 216, 230), baseValue = 1800},
@@ -274,7 +272,7 @@ local function createGardenConfig()
                 Tools = {
                     ["Regador Básico"] = {price = 50, effect = "growth_speed1.2"},
                     ["Regador Avançado"] = {price = 150, effect = "growth_speed1.5"},
-                    ["Fertilizante"] = {price = 100, effect = "mutation2x"},
+                    Fertilizante = {price = 100, effect = "mutation2x"},
                     ["Luvas Mágicas"] = {price = 200, effect = "size1.5x"},
                     ["Tesoura Dourada"] = {price = 300, effect = "value1.3x"},
                     ["Colheitadeira 3000"] = {price = 500, effect = "auto_harvest"},
@@ -306,7 +304,7 @@ local function createGardenConfig()
     }, ReplicatedStorage)
 end
 
--- Módulo de utilidades
+-- Fixed GardenUtils with proper string escaping
 local function createGardenUtils()
     return safeCreate("ModuleScript", {
         Name = "GardenUtils",
@@ -334,7 +332,6 @@ local function createGardenUtils()
                     end
                 end
                 
-                -- Benefícios Premium
                 if isPremium then
                     value = value * (1 + GardenConfig.PremiumBenefits.extraMoney)
                 end
@@ -346,7 +343,7 @@ local function createGardenUtils()
                 local plant = Instance.new("Model")
                 plant.Name = seed
                 
-                -- Caule
+                -- Stem
                 local stem = Instance.new("Part")
                 stem.Name = "Stem"
                 stem.Size = Vector3.new(0.5, 3 * size, 0.5)
@@ -357,7 +354,7 @@ local function createGardenUtils()
                 stem.Material = Enum.Material.Wood
                 stem.Parent = plant
                 
-                -- Fruta
+                -- Fruit
                 local fruit = Instance.new("Part")
                 fruit.Name = "Fruit"
                 fruit.Shape = Enum.PartType.Ball
@@ -368,7 +365,7 @@ local function createGardenUtils()
                 fruit.Color = GardenConfig.SeedData[seed].color
                 fruit.Material = Enum.Material.Neon
                 
-                -- Aplicar mutações
+                -- Apply mutations
                 if mutations then
                     for _, mutation in ipairs(mutations) do
                         local mutData = GardenConfig.Mutations[mutation]
@@ -402,7 +399,7 @@ local function createGardenUtils()
                 
                 fruit.Parent = plant
                 
-                -- Folhas
+                -- Leaves
                 local leaves = Instance.new("Part")
                 leaves.Name = "Leaves"
                 leaves.Shape = Enum.PartType.Ball
@@ -414,7 +411,7 @@ local function createGardenUtils()
                 leaves.CanCollide = false
                 leaves.Parent = plant
                 
-                -- Informações da planta
+                -- Plant info
                 local billboard = Instance.new("BillboardGui")
                 billboard.Name = "PlantInfo"
                 billboard.Size = UDim2.new(6, 0, 2, 0)
@@ -451,7 +448,7 @@ local function createGardenUtils()
                 
                 billboard.Parent = plant
                 
-                -- Prompt para colheita
+                -- Harvest prompt
                 local prompt = Instance.new("ProximityPrompt")
                 prompt.Name = "HarvestPrompt"
                 prompt.ActionText = "Colher"
@@ -480,7 +477,7 @@ local function createGardenUtils()
     }, ReplicatedStorage)
 end
 
--- Script principal do servidor
+-- Optimized main garden script
 local function createGardenMain()
     return safeCreate("Script", {
         Name = "GardenMain",
@@ -489,7 +486,6 @@ local function createGardenMain()
             local Players = game:GetService("Players")
             local GardenConfig = require(game.ReplicatedStorage:WaitForChild("GardenConfig"))
             local GardenUtils = require(game.ReplicatedStorage:WaitForChild("GardenUtils"))
-            local MarketplaceService = game:GetService("MarketplaceService")
             
             local Gardens = Instance.new("Folder")
             Gardens.Name = "Gardens"
@@ -547,7 +543,7 @@ local function createGardenMain()
                 if not data then
                     data = {
                         money = 500,
-                        seeds = {["Cenoura"] = 5},
+                        seeds = {Cenoura = 5},
                         tools = {},
                         garden = {},
                         fruits = {},
@@ -560,7 +556,7 @@ local function createGardenMain()
                 player:SetAttribute("Premium", data.isPremium)
                 
                 local playerGarden = Instance.new("Folder")
-                playerGarden.Name = player.UserId
+                playerGarden.Name = tostring(player.UserId)
                 playerGarden.Parent = Gardens
                 
                 for _, plantData in ipairs(data.garden) do
@@ -592,7 +588,7 @@ local function createGardenMain()
                 if not data then return end
                 
                 data.garden = {}
-                local playerGarden = Gardens:FindFirstChild(player.UserId)
+                local playerGarden = Gardens:FindFirstChild(tostring(player.UserId))
                 if playerGarden then
                     for _, plant in ipairs(playerGarden:GetChildren()) do
                         if plant:IsA("Model") then
@@ -611,11 +607,7 @@ local function createGardenMain()
                 end)
             end
             
-            Players.PlayerAdded:Connect(function(player)
-                setupPlayer(player)
-                UpdateUI:FireClient(player)
-            end)
-            
+            Players.PlayerAdded:Connect(setupPlayer)
             Players.PlayerRemoving:Connect(savePlayer)
             
             game:BindToClose(function()
@@ -624,7 +616,7 @@ local function createGardenMain()
                 end
             end)
             
-            -- Abrir shop quando interagir com a loja
+            -- Shop interaction
             OpenShop.OnServerEvent:Connect(function(player)
                 OpenShop:FireClient(player)
             end)
@@ -639,7 +631,7 @@ local function createGardenMain()
                     local size = 1 + (math.random() * (GardenConfig.MaxSize - 1))
                     local mutationChance = 1.0
                     
-                    -- Benefícios Premium
+                    -- Premium benefits
                     if data.isPremium then
                         mutationChance = mutationChance * GardenConfig.PremiumBenefits.mutationChance
                     end
@@ -670,7 +662,7 @@ local function createGardenMain()
                         mutations = mutations
                     })
                     
-                    local playerGarden = Gardens:FindFirstChild(player.UserId)
+                    local playerGarden = Gardens:FindFirstChild(tostring(player.UserId))
                     if playerGarden then
                         plant:SetAttribute("Owner", player.UserId)
                         plant:SetAttribute("Value", value)
@@ -755,7 +747,7 @@ local function createGardenMain()
                     UpdateUI:FireClient(player)
                     NotifyPlayer:FireClient(player, "Ferramenta comprada: " .. toolName, Color3.new(0.5, 1, 0.5))
                     
-                    -- Ativar benefícios premium
+                    -- Activate premium benefits
                     if toolName == "Kit Premium" then
                         data.isPremium = true
                         player:SetAttribute("Premium", true)
@@ -778,17 +770,17 @@ local function createGardenMain()
                 NotifyPlayer:FireClient(player, "Fruta vendida por $" .. fruit.value, Color3.new(0.5, 1, 0.5))
             end)
         ]]
-    }, game.ServerScriptService)
+    }, ServerScriptService)
 end
 
--- Interface do usuário
+-- Optimized player UI creation
 local function createPlayerUI()
     local PlayerUI = safeCreate("ScreenGui", {
         Name = "GardenUI",
         ResetOnSpawn = false
     }, StarterGui)
     
-    -- Notificações
+    -- Notifications
     local notificationFrame = safeCreate("Frame", {
         Name = "Notifications",
         Size = UDim2.new(0.3, 0, 0.15, 0),
@@ -809,7 +801,7 @@ local function createPlayerUI()
         Visible = false
     }, notificationFrame)
     
-    -- UI Principal
+    -- Main UI
     local mainFrame = safeCreate("Frame", {
         Name = "MainFrame",
         Size = UDim2.new(0.5, 0, 0.7, 0),
@@ -821,7 +813,7 @@ local function createPlayerUI()
         Draggable = true
     }, PlayerUI)
     
-    local moneyLabel = safeCreate("TextLabel", {
+    safeCreate("TextLabel", {
         Name = "MoneyLabel",
         Text = "Dinheiro: $500",
         Size = UDim2.new(0.25, 0, 0.05, 0),
@@ -833,13 +825,14 @@ local function createPlayerUI()
         TextSize = 18
     }, PlayerUI)
     
-    -- Abas
+    -- Tabs
     local tabFrame = safeCreate("Frame", {
         Size = UDim2.new(1, 0, 0.1, 0),
         BackgroundColor3 = Color3.fromRGB(30, 80, 40)
     }, mainFrame)
     
-    local seedsTab = safeCreate("TextButton", {
+    safeCreate("TextButton", {
+        Name = "SeedsTab",
         Text = "Sementes",
         Size = UDim2.new(0.25, 0, 1, 0),
         Position = UDim2.new(0, 0, 0, 0),
@@ -847,7 +840,8 @@ local function createPlayerUI()
         TextColor3 = Color3.new(1,1,1)
     }, tabFrame)
     
-    local toolsTab = safeCreate("TextButton", {
+    safeCreate("TextButton", {
+        Name = "ToolsTab",
         Text = "Ferramentas",
         Size = UDim2.new(0.25, 0, 1, 0),
         Position = UDim2.new(0.25, 0, 0, 0),
@@ -855,7 +849,8 @@ local function createPlayerUI()
         TextColor3 = Color3.new(1,1,1)
     }, tabFrame)
     
-    local premiumTab = safeCreate("TextButton", {
+    safeCreate("TextButton", {
+        Name = "PremiumTab",
         Text = "Premium",
         Size = UDim2.new(0.25, 0, 1, 0),
         Position = UDim2.new(0.5, 0, 0, 0),
@@ -863,22 +858,22 @@ local function createPlayerUI()
         TextColor3 = Color3.new(1,1,1)
     }, tabFrame)
     
-    -- Painéis de conteúdo
+    -- Content panels
     local contentFrame = safeCreate("Frame", {
         Size = UDim2.new(1, 0, 0.9, 0),
         Position = UDim2.new(0, 0, 0.1, 0),
         BackgroundTransparency = 1
     }, mainFrame)
     
-    -- Painel de sementes
-    local seedsFrame = safeCreate("Frame", {
+    -- Seeds panel
+    safeCreate("Frame", {
         Name = "SeedsFrame",
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Visible = true
     }, contentFrame)
     
-    local seedsScroller = safeCreate("ScrollingFrame", {
+    safeCreate("ScrollingFrame", {
         Name = "SeedsScroller",
         Size = UDim2.new(0.95, 0, 0.9, 0),
         Position = UDim2.new(0.025, 0, 0.05, 0),
@@ -887,15 +882,15 @@ local function createPlayerUI()
         ScrollBarThickness = 5
     }, seedsFrame)
     
-    -- Painel de ferramentas
-    local toolsFrame = safeCreate("Frame", {
+    -- Tools panel
+    safeCreate("Frame", {
         Name = "ToolsFrame",
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Visible = false
     }, contentFrame)
     
-    local toolsScroller = safeCreate("ScrollingFrame", {
+    safeCreate("ScrollingFrame", {
         Name = "ToolsScroller",
         Size = UDim2.new(0.95, 0, 0.9, 0),
         Position = UDim2.new(0.025, 0, 0.05, 0),
@@ -904,7 +899,7 @@ local function createPlayerUI()
         ScrollBarThickness = 5
     }, toolsFrame)
     
-    -- Painel premium
+    -- Premium panel
     local premiumFrame = safeCreate("Frame", {
         Name = "PremiumFrame",
         Size = UDim2.new(1, 0, 1, 0),
@@ -923,8 +918,8 @@ local function createPlayerUI()
         TextSize = 24
     }, premiumFrame)
     
-    -- Script da UI
-    local UIScript = safeCreate("LocalScript", {
+    -- UI script
+    safeCreate("LocalScript", {
         Name = "UIScript",
         Source = [[
             local Player = game.Players.LocalPlayer
@@ -942,7 +937,7 @@ local function createPlayerUI()
             local moneyLabel = ui:WaitForChild("MoneyLabel")
             local notificationFrame = ui:WaitForChild("Notifications")
             
-            -- Elementos das abas
+            -- Tab elements
             local seedsFrame = mainFrame:WaitForChild("ContentFrame"):WaitForChild("SeedsFrame")
             local toolsFrame = mainFrame:WaitForChild("ContentFrame"):WaitForChild("ToolsFrame")
             local premiumFrame = mainFrame:WaitForChild("ContentFrame"):WaitForChild("PremiumFrame")
@@ -950,7 +945,7 @@ local function createPlayerUI()
             local seedsScroller = seedsFrame:WaitForChild("SeedsScroller")
             local toolsScroller = toolsFrame:WaitForChild("ToolsScroller")
             
-            -- Sistema de notificações
+            -- Notification system
             local function showNotification(text, color)
                 local template = notificationFrame:FindFirstChild("NotificationTemplate")
                 if not template then return end
@@ -987,7 +982,7 @@ local function createPlayerUI()
             
             NotifyPlayer.OnClientEvent:Connect(showNotification)
             
-            -- Função para criar botões de semente
+            -- Seed button creation
             local function createSeedButton(seedType, yOffset)
                 local seedData = GardenConfig.SeedData[seedType]
                 if not seedData then return end
@@ -1043,7 +1038,7 @@ local function createPlayerUI()
                 return seedFrame
             end
             
-            -- Função para criar botões de ferramenta
+            -- Tool button creation
             local function createToolButton(toolName, yOffset)
                 local toolData = GardenConfig.Tools[toolName]
                 if not toolData then return end
@@ -1099,7 +1094,7 @@ local function createPlayerUI()
                 return toolFrame
             end
             
-            -- Atualizar UI da loja
+            -- Update shop UI
             local function updateShopUI(stock)
                 seedsScroller:ClearAllChildren()
                 
@@ -1113,7 +1108,7 @@ local function createPlayerUI()
                 seedsScroller.CanvasSize = UDim2.new(0, 0, 0, yOffset)
             end
             
-            -- Atualizar UI de ferramentas
+            -- Update tools UI
             local function updateToolsUI()
                 toolsScroller:ClearAllChildren()
                 
@@ -1127,7 +1122,7 @@ local function createPlayerUI()
                 toolsScroller.CanvasSize = UDim2.new(0, 0, 0, yOffset)
             end
             
-            -- Atualizar UI premium
+            -- Update premium UI
             local function updatePremiumUI()
                 local benefits = ""
                 for benefit, value in pairs(GardenConfig.PremiumBenefits) do
@@ -1138,7 +1133,7 @@ local function createPlayerUI()
                 premiumFrame.PremiumLabel.Text = "BENEFÍCIOS PREMIUM:\n\n" .. benefits
             end
             
-            -- Inicialização
+            -- Initialization
             ShopReset.OnClientEvent:Connect(updateShopUI)
             UpdateUI.OnClientEvent:Connect(function()
                 moneyLabel.Text = "Dinheiro: $" .. Player:GetAttribute("Money")
@@ -1157,7 +1152,7 @@ local function createPlayerUI()
                 moneyLabel.Text = "Dinheiro: $" .. Player:GetAttribute("Money")
             end)
             
-            -- Controle de abas
+            -- Tab control
             seedsTab.MouseButton1Click:Connect(function()
                 seedsFrame.Visible = true
                 toolsFrame.Visible = false
@@ -1176,7 +1171,7 @@ local function createPlayerUI()
                 premiumFrame.Visible = true
             end)
             
-            -- Controle da GUI
+            -- GUI control
             game:GetService("UserInputService").InputBegan:Connect(function(input)
                 if input.KeyCode == Enum.KeyCode.B then
                     mainFrame.Visible = not mainFrame.Visible
@@ -1186,7 +1181,7 @@ local function createPlayerUI()
                 end
             end)
             
-            -- Sistema de plantio
+            -- Planting system
             for _, plot in ipairs(workspace:GetChildren()) do
                 if plot.Name == "GardenPlot" then
                     local prompt = plot:FindFirstChildOfClass("ProximityPrompt")
@@ -1200,7 +1195,7 @@ local function createPlayerUI()
                 end
             end
             
-            -- Botão de admin para jogadores autorizados
+            -- Admin button for authorized players
             if table.find(GardenConfig.AdminIDs, Player.UserId) then
                 local adminBtn = Instance.new("TextButton")
                 adminBtn.Text = "ADMIN"
@@ -1216,42 +1211,42 @@ local function createPlayerUI()
     }, PlayerUI)
 end
 
--- Função principal para criar o jardim
+-- Main function to create the garden
 createBtn.Click:Connect(function()
-    -- Criar tela de carregamento
+    -- Create loading screen
     local loadingScreen = createLoadingScreen()
     loadingScreen.update("Criando configurações...", 0.1)
     wait(0.5)
     
-    -- Configuração principal
+    -- Main configuration
     createGardenConfig()
     loadingScreen.update("Criando utilitários...", 0.2)
     wait(0.5)
     
-    -- Módulo de utilidades
+    -- Utilities module
     createGardenUtils()
     loadingScreen.update("Criando script principal...", 0.3)
     wait(0.5)
     
-    -- Script principal
+    -- Main script
     createGardenMain()
     loadingScreen.update("Criando interface...", 0.4)
     wait(0.5)
     
-    -- Interface do usuário
+    -- User interface
     createPlayerUI()
     loadingScreen.update("Gerando mapa...", 0.6)
     wait(0.5)
     
-    -- Gerar mapa
+    -- Generate map
     createGardenMap()
     loadingScreen.update("Finalizando...", 0.9)
     wait(1)
     
-    -- Remover tela de carregamento
+    -- Remove loading screen
     loadingScreen.gui:Destroy()
     
-    -- Notificação final
+    -- Final notification
     StarterGui:SetCore("SendNotification", {
         Title = "Jardim Premium V2 Criado!",
         Text = "Pressione B para abrir a loja de sementes",
@@ -1260,9 +1255,9 @@ createBtn.Click:Connect(function()
     })
 end)
 
--- Função para remover o jardim
+-- Function to remove the garden
 removeBtn.Click:Connect(function()
-    -- Remover elementos com segurança
+    -- Safe removal function
     local function safeDestroy(obj)
         pcall(function()
             if obj then
@@ -1271,10 +1266,10 @@ removeBtn.Click:Connect(function()
         end)
     end
 
-    -- Remover jardins
+    -- Remove gardens
     safeDestroy(Workspace:FindFirstChild("Gardens"))
     
-    -- Remover partes do ambiente
+    -- Remove environment parts
     for _, plot in ipairs(Workspace:GetChildren()) do
         if plot.Name == "GardenPlot" or plot.Name == "SeedShop" or 
            plot.Name == "GardenArea" or plot.Name:find("Tree") or 
@@ -1283,7 +1278,7 @@ removeBtn.Click:Connect(function()
         end
     end
     
-    -- Remover scripts e configurações
+    -- Remove scripts and configurations
     safeDestroy(ReplicatedStorage:FindFirstChild("GardenConfig"))
     safeDestroy(ReplicatedStorage:FindFirstChild("GardenUtils"))
     safeDestroy(ReplicatedStorage:FindFirstChild("GardenRemotes"))
@@ -1291,7 +1286,7 @@ removeBtn.Click:Connect(function()
     safeDestroy(StarterGui:FindFirstChild("GardenUI"))
     safeDestroy(StarterGui:FindFirstChild("LoadingScreen"))
     
-    -- Notificação de remoção
+    -- Removal notification
     StarterGui:SetCore("SendNotification", {
         Title = "Jardim Removido",
         Text = "Todos os elementos foram removidos com sucesso",
